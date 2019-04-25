@@ -77,9 +77,9 @@ func KeyRawDataUrls(hash []byte) []byte {
 
 // TrackRawData tracks raw data with the provided hash and optional URL.
 func (k Keeper) TrackRawData(ctx sdk.Context, hash []byte, url string) (types.DataAddress, sdk.Error) {
-	var urlsToStore []string
+	urlsToStore := []string{}
 	existing, err := k.GetRawDataURLs(ctx, hash)
-	if err != nil {
+	if err == nil {
 		if len(url) == 0 {
 			return nil, sdk.ErrUnknownRequest("nothing to do")
 		}
@@ -90,7 +90,8 @@ func (k Keeper) TrackRawData(ctx sdk.Context, hash []byte, url string) (types.Da
 		}
 	}
 	store := ctx.KVStore(k.dataStoreKey)
-	store.Set(KeyRawDataUrls(hash), k.cdc.MustMarshalBinaryBare(urlsToStore))
+	bz := k.cdc.MustMarshalBinaryLengthPrefixed(urlsToStore)
+	store.Set(KeyRawDataUrls(hash), bz)
 	return types.GetDataAddressRawData(hash), nil
 }
 
@@ -100,6 +101,6 @@ func (k Keeper) GetRawDataURLs(ctx sdk.Context, hash []byte) (urls []string, err
 	if bz == nil {
 		return nil, sdk.ErrUnknownRequest("not found")
 	}
-	k.cdc.MustUnmarshalBinaryBare(bz, &urls)
+	k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &urls)
 	return urls, nil
 }
